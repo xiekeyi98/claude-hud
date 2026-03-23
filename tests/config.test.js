@@ -57,6 +57,7 @@ test('loadConfig returns valid config structure', async () => {
   assert.equal(typeof config.display.showTodos, 'boolean');
   assert.equal(typeof config.display.showSessionName, 'boolean');
   assert.equal(typeof config.display.showClaudeCodeVersion, 'boolean');
+  assert.equal(typeof config.display.showMemoryUsage, 'boolean');
   assert.equal(typeof config.colors, 'object');
   for (const key of ['context', 'usage', 'warning', 'usageWarning', 'critical']) {
     const t = typeof config.colors[key];
@@ -97,6 +98,17 @@ test('mergeConfig defaults showClaudeCodeVersion to false', () => {
 test('mergeConfig preserves explicit showClaudeCodeVersion=true', () => {
   const config = mergeConfig({ display: { showClaudeCodeVersion: true } });
   assert.equal(config.display.showClaudeCodeVersion, true);
+});
+
+test('mergeConfig defaults showMemoryUsage to false', () => {
+  const config = mergeConfig({});
+  assert.equal(config.display.showMemoryUsage, false);
+  assert.equal(DEFAULT_CONFIG.display.showMemoryUsage, false);
+});
+
+test('mergeConfig preserves explicit showMemoryUsage=true', () => {
+  const config = mergeConfig({ display: { showMemoryUsage: true } });
+  assert.equal(config.display.showMemoryUsage, true);
 });
 
 test('mergeConfig preserves customLine and truncates long values', () => {
@@ -226,19 +238,19 @@ test('mergeConfig defaults elementOrder to the full expanded layout', () => {
 
 test('mergeConfig preserves valid custom elementOrder including activity elements', () => {
   const config = mergeConfig({
-    elementOrder: ['tools', 'project', 'usage', 'context', 'agents', 'todos', 'environment'],
+    elementOrder: ['tools', 'project', 'usage', 'memory', 'context', 'agents', 'todos', 'environment'],
   });
   assert.deepEqual(
     config.elementOrder,
-    ['tools', 'project', 'usage', 'context', 'agents', 'todos', 'environment']
+    ['tools', 'project', 'usage', 'memory', 'context', 'agents', 'todos', 'environment']
   );
 });
 
 test('mergeConfig filters unknown entries and de-duplicates elementOrder', () => {
   const config = mergeConfig({
-    elementOrder: ['project', 'agents', 'project', 'banana', 'usage', 'agents', 'context'],
+    elementOrder: ['project', 'agents', 'project', 'banana', 'usage', 'memory', 'agents', 'context'],
   });
-  assert.deepEqual(config.elementOrder, ['project', 'agents', 'usage', 'context']);
+  assert.deepEqual(config.elementOrder, ['project', 'agents', 'usage', 'memory', 'context']);
 });
 
 test('mergeConfig treats elementOrder as an explicit expanded-mode filter', () => {

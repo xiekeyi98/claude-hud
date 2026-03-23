@@ -140,7 +140,7 @@ Edit `~/.claude/plugins/claude-hud/config.json` directly for advanced settings s
 |--------|------|---------|-------------|
 | `lineLayout` | string | `expanded` | Layout: `expanded` (multi-line) or `compact` (single line) |
 | `pathLevels` | 1-3 | 1 | Directory levels to show in project path |
-| `elementOrder` | string[] | `["project","context","usage","environment","tools","agents","todos"]` | Expanded-mode element order. Omit entries to hide them in expanded mode. |
+| `elementOrder` | string[] | `["project","context","usage","memory","environment","tools","agents","todos"]` | Expanded-mode element order. Omit entries to hide them in expanded mode. |
 | `gitStatus.enabled` | boolean | true | Show git branch in HUD |
 | `gitStatus.showDirty` | boolean | true | Show `*` for uncommitted changes |
 | `gitStatus.showAheadBehind` | boolean | false | Show `↑N ↓N` for ahead/behind remote |
@@ -160,6 +160,7 @@ Edit `~/.claude/plugins/claude-hud/config.json` directly for advanced settings s
 | `display.showTodos` | boolean | false | Show todos progress line |
 | `display.showSessionName` | boolean | false | Show session slug or custom title from `/rename` |
 | `display.showClaudeCodeVersion` | boolean | false | Show the installed Claude Code version, e.g. `CC v2.1.81` |
+| `display.showMemoryUsage` | boolean | false | Show a coarse system RAM usage line in expanded layout |
 | `usage.cacheTtlSeconds` | number | 60 | How long (seconds) to cache a successful usage API response |
 | `usage.failureCacheTtlSeconds` | number | 15 | How long (seconds) to cache a failed usage API response before retrying |
 | `colors.context` | color name | `green` | Base color for the context bar and context percentage |
@@ -169,6 +170,8 @@ Edit `~/.claude/plugins/claude-hud/config.json` directly for advanced settings s
 | `colors.critical` | color name | `red` | Critical color for limit-reached states and critical thresholds |
 
 Supported color names: `red`, `green`, `yellow`, `magenta`, `cyan`, `brightBlue`, `brightMagenta`.
+
+`display.showMemoryUsage` is fully opt-in and only renders in `expanded` layout. It reports coarse system RAM usage from the local machine, not precise memory pressure inside Claude Code or a specific process.
 
 ### Usage Limits (Pro/Max/Team)
 
@@ -201,7 +204,7 @@ To disable, set `display.showUsage` to `false`.
 {
   "lineLayout": "expanded",
   "pathLevels": 2,
-  "elementOrder": ["project", "tools", "context", "usage", "environment", "agents", "todos"],
+  "elementOrder": ["project", "tools", "context", "usage", "memory", "environment", "agents", "todos"],
   "gitStatus": {
     "enabled": true,
     "showDirty": true,
@@ -213,7 +216,8 @@ To disable, set `display.showUsage` to `false`.
     "showAgents": true,
     "showTodos": true,
     "showConfigCounts": true,
-    "showDuration": true
+    "showDuration": true,
+    "showMemoryUsage": true
   },
   "colors": {
     "context": "cyan",

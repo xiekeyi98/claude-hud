@@ -62,6 +62,13 @@ export interface UsageData {
   apiError?: string; // short error reason (e.g., 401, timeout)
 }
 
+export interface MemoryInfo {
+  totalBytes: number;
+  usedBytes: number;
+  freeBytes: number;
+  usedPercent: number;
+}
+
 /** Check if usage limit is reached (either window at 100%) */
 export function isLimitReached(data: UsageData): boolean {
   return data.fiveHour === 100 || data.sevenDay === 100;
@@ -85,6 +92,7 @@ export interface RenderContext {
   sessionDuration: string;
   gitStatus: GitStatus | null;
   usageData: UsageData | null;
+  memoryUsage: MemoryInfo | null;
   config: HudConfig;
   extraLabel: string | null;
   claudeCodeVersion?: string;

@@ -10,6 +10,7 @@ import { renderToolsLine } from '../dist/render/tools-line.js';
 import { renderAgentsLine } from '../dist/render/agents-line.js';
 import { renderTodosLine } from '../dist/render/todos-line.js';
 import { renderUsageLine } from '../dist/render/lines/usage.js';
+import { renderMemoryLine } from '../dist/render/lines/memory.js';
 import { getContextColor, getQuotaColor } from '../dist/render/colors.js';
 
 function stripAnsi(str) {
@@ -38,13 +39,14 @@ function baseContext() {
     sessionDuration: '',
     gitStatus: null,
     usageData: null,
+    memoryUsage: null,
     config: {
       lineLayout: 'compact',
       showSeparators: false,
       pathLevels: 1,
-      elementOrder: ['project', 'context', 'usage', 'environment', 'tools', 'agents', 'todos'],
+      elementOrder: ['project', 'context', 'usage', 'memory', 'environment', 'tools', 'agents', 'todos'],
       gitStatus: { enabled: true, showDirty: true, showAheadBehind: false, showFileStats: false },
-      display: { showModel: true, showProject: true, showContextBar: true, contextValue: 'percent', showConfigCounts: true, showDuration: true, showSpeed: false, showTokenBreakdown: true, showUsage: true, usageBarEnabled: false, showTools: true, showAgents: true, showTodos: true, showSessionName: false, showClaudeCodeVersion: false, autocompactBuffer: 'enabled', usageThreshold: 0, sevenDayThreshold: 80, environmentThreshold: 0 },
+      display: { showModel: true, showProject: true, showContextBar: true, contextValue: 'percent', showConfigCounts: true, showDuration: true, showSpeed: false, showTokenBreakdown: true, showUsage: true, usageBarEnabled: false, showTools: true, showAgents: true, showTodos: true, showSessionName: false, showClaudeCodeVersion: false, showMemoryUsage: false, autocompactBuffer: 'enabled', usageThreshold: 0, sevenDayThreshold: 80, environmentThreshold: 0, customLine: '' },
       colors: {
         context: 'green',
         usage: 'brightBlue',
@@ -352,6 +354,37 @@ test('renderProjectLine includes Claude Code version when enabled', () => {
   ctx.claudeCodeVersion = '2.1.81';
   const line = stripAnsi(renderProjectLine(ctx));
   assert.ok(line.includes('CC v2.1.81'));
+});
+
+test('renderMemoryLine shows coarse system RAM usage in expanded layout when enabled', () => {
+  const ctx = baseContext();
+  ctx.config.lineLayout = 'expanded';
+  ctx.config.display.showMemoryUsage = true;
+  ctx.memoryUsage = {
+    totalBytes: 16 * 1024 ** 3,
+    usedBytes: 10 * 1024 ** 3,
+    freeBytes: 6 * 1024 ** 3,
+    usedPercent: 63,
+  };
+
+  const line = stripAnsi(renderMemoryLine(ctx));
+
+  assert.ok(line.includes('RAM'));
+  assert.ok(line.includes('10 GB / 16 GB'));
+  assert.ok(line.includes('(63%)'));
+});
+
+test('renderMemoryLine stays hidden in compact layout even when enabled', () => {
+  const ctx = baseContext();
+  ctx.config.display.showMemoryUsage = true;
+  ctx.memoryUsage = {
+    totalBytes: 16 * 1024 ** 3,
+    usedBytes: 10 * 1024 ** 3,
+    freeBytes: 6 * 1024 ** 3,
+    usedPercent: 63,
+  };
+
+  assert.equal(renderMemoryLine(ctx), null);
 });
 
 test('renderProjectLine includes extraLabel when present', () => {
@@ -1281,6 +1314,12 @@ test('render expanded layout honors custom elementOrder including activity place
     fiveHourResetAt: new Date(Date.now() + 60 * 60 * 1000),
     sevenDayResetAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
   };
+  ctx.memoryUsage = {
+    totalBytes: 16 * 1024 ** 3,
+    usedBytes: 10 * 1024 ** 3,
+    freeBytes: 6 * 1024 ** 3,
+    usedPercent: 63,
+  };
   ctx.claudeMdCount = 1;
   ctx.rulesCount = 2;
   ctx.transcript.tools = [
@@ -1292,24 +1331,27 @@ test('render expanded layout honors custom elementOrder including activity place
   ctx.transcript.todos = [
     { content: 'todo-marker', status: 'in_progress' },
   ];
-  ctx.config.elementOrder = ['tools', 'project', 'usage', 'context', 'environment', 'agents', 'todos'];
+  ctx.config.display.showMemoryUsage = true;
+  ctx.config.elementOrder = ['tools', 'project', 'usage', 'context', 'memory', 'environment', 'agents', 'todos'];
 
   const lines = captureRenderLines(ctx);
   const toolIndex = lines.findIndex(line => line.includes('Read'));
   const projectIndex = lines.findIndex(line => line.includes('my-project'));
   const combinedIndex = lines.findIndex(line => line.includes('Usage') && line.includes('Context'));
+  const memoryIndex = lines.findIndex(line => line.includes('RAM'));
   const environmentIndex = lines.findIndex(line => line.includes('CLAUDE.md'));
   const agentIndex = lines.findIndex(line => line.includes('planner'));
   const todoIndex = lines.findIndex(line => line.includes('todo-marker'));
 
   assert.deepEqual(
-    [toolIndex, projectIndex, combinedIndex, environmentIndex, agentIndex, todoIndex].every(index => index >= 0),
+    [toolIndex, projectIndex, combinedIndex, memoryIndex, environmentIndex, agentIndex, todoIndex].every(index => index >= 0),
     true,
     'expected all configured elements to render'
   );
   assert.ok(toolIndex < projectIndex, 'tool line should move ahead of project');
   assert.ok(projectIndex < combinedIndex, 'combined usage/context line should follow project');
-  assert.ok(combinedIndex < environmentIndex, 'environment line should follow context/usage');
+  assert.ok(combinedIndex < memoryIndex, 'memory line should follow combined usage/context');
+  assert.ok(memoryIndex < environmentIndex, 'environment line should follow memory');
   assert.ok(environmentIndex < agentIndex, 'agent line should follow environment');
   assert.ok(agentIndex < todoIndex, 'todo line should follow agent line');
 });
@@ -1325,6 +1367,12 @@ test('render expanded layout omits elements not present in elementOrder', () => 
     fiveHourResetAt: new Date(Date.now() + 60 * 60 * 1000),
     sevenDayResetAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
   };
+  ctx.memoryUsage = {
+    totalBytes: 16 * 1024 ** 3,
+    usedBytes: 10 * 1024 ** 3,
+    freeBytes: 6 * 1024 ** 3,
+    usedPercent: 63,
+  };
   ctx.claudeMdCount = 1;
   ctx.transcript.tools = [
     { id: 'tool-1', name: 'Read', status: 'completed', startTime: new Date(0), endTime: new Date(0), duration: 0 },
@@ -1336,6 +1384,7 @@ test('render expanded layout omits elements not present in elementOrder', () => 
     { content: 'todo-marker', status: 'in_progress' },
   ];
   ctx.config.elementOrder = ['project', 'tools'];
+  ctx.config.display.showMemoryUsage = true;
 
   const output = captureRenderLines(ctx).join('\n');
 
@@ -1343,6 +1392,7 @@ test('render expanded layout omits elements not present in elementOrder', () => 
   assert.ok(output.includes('Read'), 'tools should render when included');
   assert.ok(!output.includes('Context'), 'context should be omitted when excluded');
   assert.ok(!output.includes('Usage'), 'usage should be omitted when excluded');
+  assert.ok(!output.includes('RAM'), 'memory should be omitted when excluded');
   assert.ok(!output.includes('CLAUDE.md'), 'environment should be omitted when excluded');
   assert.ok(!output.includes('planner'), 'agents should be omitted when excluded');
   assert.ok(!output.includes('todo-marker'), 'todos should be omitted when excluded');
