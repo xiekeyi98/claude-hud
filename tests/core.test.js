@@ -575,6 +575,42 @@ test('parseTranscript handles edge-case lines and error statuses', async () => {
   }
 });
 
+test('parseTranscript detects agents recorded with the Agent tool name', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'claude-hud-'));
+  const filePath = path.join(dir, 'agent-tool-name.jsonl');
+  const lines = [
+    JSON.stringify({
+      timestamp: '2024-01-01T00:00:00.000Z',
+      message: {
+        content: [
+          { type: 'tool_use', id: 'agent-1', name: 'Agent', input: { subagent_type: 'Explore', model: 'haiku' } },
+        ],
+      },
+    }),
+    JSON.stringify({
+      timestamp: '2024-01-01T00:00:01.000Z',
+      message: {
+        content: [
+          { type: 'tool_result', tool_use_id: 'agent-1', is_error: false },
+        ],
+      },
+    }),
+  ];
+
+  await writeFile(filePath, lines.join('\n'), 'utf8');
+
+  try {
+    const result = await parseTranscript(filePath);
+    assert.equal(result.agents.length, 1);
+    assert.equal(result.agents[0]?.id, 'agent-1');
+    assert.equal(result.agents[0]?.type, 'Explore');
+    assert.equal(result.agents[0]?.model, 'haiku');
+    assert.equal(result.agents[0]?.status, 'completed');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('parseTranscript returns undefined targets for unknown tools', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'claude-hud-'));
   const filePath = path.join(dir, 'unknown-tools.jsonl');

@@ -246,7 +246,7 @@ function processEntry(
         startTime: timestamp,
       };
 
-      if (block.name === 'Task') {
+      if (block.name === 'Task' || block.name === 'Agent') {
         const input = block.input as Record<string, unknown>;
         const agentEntry: AgentEntry = {
           id: block.id,
