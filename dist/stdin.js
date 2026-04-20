@@ -158,6 +158,12 @@ export function getBufferedPercent(stdin) {
     const buffer = size * AUTOCOMPACT_BUFFER_PERCENT * scale;
     return Math.min(100, Math.round(((totalTokens + buffer) / size) * 100));
 }
+// Enterprise plan alias → human-readable display name
+const ENTERPRISE_ALIAS_LABELS = {
+    opusplan: 'Claude Opus',
+    sonnetplan: 'Claude Sonnet',
+    haikuplan: 'Claude Haiku',
+};
 export function getModelName(stdin) {
     const displayName = stdin.model?.display_name?.trim();
     if (displayName) {
@@ -166,6 +172,11 @@ export function getModelName(stdin) {
     const modelId = stdin.model?.id?.trim();
     if (!modelId) {
         return 'Unknown';
+    }
+    // Resolve enterprise plan aliases to readable labels
+    const enterpriseLabel = ENTERPRISE_ALIAS_LABELS[modelId.toLowerCase()];
+    if (enterpriseLabel) {
+        return enterpriseLabel;
     }
     const normalizedBedrockLabel = normalizeBedrockModelLabel(modelId);
     return normalizedBedrockLabel ?? modelId;
@@ -177,9 +188,19 @@ export function isBedrockModelId(modelId) {
     const normalized = modelId.toLowerCase();
     return normalized.includes('anthropic.claude-');
 }
+const ENTERPRISE_MODEL_IDS = new Set(['opusplan', 'sonnetplan', 'haikuplan']);
+export function isEnterpriseModelId(modelId) {
+    if (!modelId) {
+        return false;
+    }
+    return ENTERPRISE_MODEL_IDS.has(modelId.toLowerCase());
+}
 export function getProviderLabel(stdin) {
     if (process.env.CLAUDE_CODE_USE_BEDROCK === '1') {
         return 'Bedrock';
+    }
+    if (isEnterpriseModelId(stdin.model?.id)) {
+        return 'Enterprise';
     }
     return null;
 }
